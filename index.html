@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ขยะลงถังให้ถูก</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;600&family=Sarabun:wght@400;600&display=swap">
+<style>
+/* Layout: one column; timer/score bar, one big item card, three bin buttons in a row. Same safety-yellow family as the other games */
+:root{
+  --bg:#f6f5ef; --surface:#ffffff; --fg:#1d1f1a; --muted:#5e6156; --line:#dddbd0;
+  --yellow:#f5c400; --ink:#16170f;
+  --red:#d1301c; --amber:#e8a400; --blue:#2463b8;
+  --bad:#c8321e; --bad-bg:#fde3de; --ok:#1f8a4c; --ok-bg:#e1f3e8;
+  --display:"Mitr","Sarabun",system-ui,sans-serif; --body:"Sarabun",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15160f; --surface:#202118; --fg:#f1efe4; --muted:#a8a796; --line:#36372b;
+  --bad:#ff6b55; --bad-bg:#46221b; --ok:#4cc37f; --ok-bg:#1b3626; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15160f; --surface:#202118; --fg:#f1efe4; --muted:#a8a796; --line:#36372b;
+  --bad:#ff6b55; --bad-bg:#46221b; --ok:#4cc37f; --ok-bg:#1b3626; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;-webkit-user-select:none;user-select:none}
+.wrap{max-width:480px;margin:0 auto;padding-inline:16px;padding-block:20px 32px;display:flex;flex-direction:column;gap:14px}
+.stripe{height:10px;border-radius:2px;background:repeating-linear-gradient(-45deg,var(--yellow) 0 14px,var(--ink) 14px 28px)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(26px,7.5vw,38px);line-height:1.15;margin:0;text-wrap:balance}
+h1 span{background:var(--yellow);color:var(--ink);padding:0 .2em;border-radius:3px}
+.sub{color:var(--muted);margin:0}
+.hud{display:flex;justify-content:space-between;font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.hud b{font-weight:600}
+.hud .streak{color:var(--muted);font-size:15px;align-self:center}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:14px;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px;text-align:center;transition:border-color .15s,background .15s}
+.card .ic{font-size:64px;line-height:1}
+.card .nm{font-family:var(--display);font-size:clamp(20px,5.6vw,24px);font-weight:600;line-height:1.3}
+.card .why{font-size:15px;color:var(--muted);min-height:1.5em}
+.card.ok{border-color:var(--ok);background:var(--ok-bg)}
+.card.bad{border-color:var(--bad);background:var(--bad-bg)}
+.card.pop{animation:pop .18s ease-out}
+@keyframes pop{from{transform:scale(.92);opacity:.5}to{transform:none;opacity:1}}
+.bins{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bin{border:0;border-radius:12px 12px 16px 16px;padding:12px 6px 14px;cursor:pointer;color:#fff;font-family:var(--display);font-size:clamp(14px,4vw,16px);line-height:1.25;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
+.bin::before{content:"";display:block;width:70%;height:8px;border-radius:4px;background:rgba(255,255,255,.35)}
+.bin .bi{font-size:30px;line-height:1}
+.bin.haz{background:var(--red)} .bin.rec{background:var(--amber);color:var(--ink)} .bin.gen{background:var(--blue)}
+.bin.hint{outline:4px solid var(--ok);outline-offset:3px}
+.bin:active{transform:scale(.96)}
+.bin:focus-visible,.btn:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.bin:disabled{cursor:default}
+.key{font-size:13px;color:var(--muted);text-align:center;margin:0}
+.btn{font-family:var(--display);font-size:20px;font-weight:600;border:0;border-radius:10px;padding:15px;background:var(--yellow);color:var(--ink);cursor:pointer;width:100%}
+.namebox{display:flex;flex-direction:column;gap:6px}
+.namebox label{font-family:var(--display);font-size:15px}
+.namebox input{font:inherit;width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);-webkit-user-select:text;user-select:text}
+.namebox input:focus-visible{outline:3px solid var(--yellow);outline-offset:1px}
+.err{color:var(--bad);font-size:14px}
+.player{font-family:var(--display);font-size:15px;color:var(--muted);text-align:center}
+.player b{color:var(--fg);font-weight:600}
+.guide{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:13px;line-height:1.35}
+.guide div{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px;border-top-width:5px}
+.guide b{font-family:var(--display);display:block;font-size:14px}
+.result{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:8px;text-align:center}
+.big{font-family:var(--display);font-size:60px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.rank{font-family:var(--display);font-size:18px}
+.list{margin:0;padding:0;list-style:none;text-align:left;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.list li{border-top:1px solid var(--line);padding-top:6px}
+.list small{display:block;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.card.pop{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="stripe" aria-hidden="true"></div>
+  <h1>ขยะลง<span>ถังให้ถูก</span></h1>
+  <p class="sub" id="intro">แตะถังที่ถูกต้องให้ได้มากที่สุดใน 45 วินาที ถูก +10 ผิด −5 ถูกติดกัน 5 ครั้งขึ้นไปได้ +15</p>
+
+  <div class="guide" id="guide">
+    <div style="border-top-color:var(--red)"><b>ขยะอันตราย</b>เปื้อนเคมี น้ำมัน แบตเตอรี่ หลอดไฟ</div>
+    <div style="border-top-color:var(--amber)"><b>ขยะรีไซเคิล</b>กระดาษ กล่อง ขวด กระป๋อง ที่สะอาด</div>
+    <div style="border-top-color:var(--blue)"><b>ขยะทั่วไป</b>เปื้อนอาหาร ใช้แล้วทิ้ง รีไซเคิลไม่ได้</div>
+  </div>
+
+  <div class="namebox" id="namebox">
+    <label for="pname">ชื่อผู้เล่น</label>
+    <input id="pname" placeholder="ชื่อ-นามสกุล หรือ รหัสพนักงาน" maxlength="60" autocomplete="name">
+    <label for="pdept">แผนก</label>
+    <input id="pdept" placeholder="เช่น QA, Production, Maintenance" maxlength="40">
+    <div class="err" id="err" hidden>กรอกชื่อและแผนกก่อนเริ่มเกม</div>
+  </div>
+
+  <div class="hud" id="hud" hidden><span>⏱ <b id="time">45</b></span><span class="streak" id="streak"></span><span>คะแนน <b id="score">0</b></span></div>
+  <div class="card" id="card" hidden><span class="ic" id="ic"></span><span class="nm" id="nm"></span><span class="why" id="why"></span></div>
+  <div class="bins" id="bins" hidden>
+    <button class="bin haz" id="b-haz" data-b="haz"><span class="bi">☣️</span>ขยะอันตราย</button>
+    <button class="bin rec" id="b-rec" data-b="rec"><span class="bi">♻️</span>ขยะรีไซเคิล</button>
+    <button class="bin gen" id="b-gen" data-b="gen"><span class="bi">🗑️</span>ขยะทั่วไป</button>
+  </div>
+  <p class="key" id="keys" hidden>คีย์บอร์ด: กด 1 / 2 / 3</p>
+
+  <div class="result" id="result" hidden>
+    <div class="big" id="final">0</div>
+    <div class="rank" id="rank"></div>
+    <div class="sub" id="stat"></div>
+    <div class="sub" id="send"></div>
+    <ul class="list" id="list"></ul>
+  </div>
+
+  <div class="player" id="player" hidden></div>
+  <button class="btn" id="btn">เริ่มเลย</button>
+</div>
+<iframe name="scoreSink" id="scoreSink" hidden></iframe>
+
+<script>
+/* ===== ตั้งค่า Google Form ===== (FORM_URL ว่างไว้ = ยังไม่ส่งคะแนน) */
+const FORM_URL="https://docs.google.com/forms/d/e/1FAIpQLScnAwlI3oQvouEMk5pmjeKj0LQcY5n5GybDs776xopXTmIQXQ/formResponse";
+const ENTRY_NAME="entry.2146890152";
+const ENTRY_SCORE="entry.1870921624";
+const ENTRY_DEPT="entry.418576817";
+const GAME_NAME="ขยะลงถังให้ถูก";
+
+const BIN={haz:"ขยะอันตราย",rec:"ขยะรีไซเคิล",gen:"ขยะทั่วไป"};
+const ITEMS=[
+ ["🧤","ถุงมือเปื้อนสารเคมี","haz","มีสารเคมีตกค้าง"],
+ ["🛢️","ผ้าเช็ดน้ำมันเครื่อง","haz","เปื้อนน้ำมัน ติดไฟง่าย"],
+ ["🔋","ถ่านไฟฉายใช้แล้ว","haz","มีโลหะหนัก"],
+ ["💡","หลอดฟลูออเรสเซนต์","haz","มีสารปรอท"],
+ ["🧪","ขวดสารเคมีเปล่า","haz","ภาชนะสารเคมีถือเป็นของอันตราย"],
+ ["🎨","กระป๋องสีเหลือใช้","haz","สีมีตัวทำละลาย"],
+ ["🧴","กระป๋องสเปรย์","haz","มีแรงดันและสารไวไฟ"],
+ ["🖨️","ตลับหมึกพิมพ์","haz","มีหมึกและสารเคมี"],
+ ["🧻","แกนกระดาษทิชชู่","rec","กระดาษสะอาด รีไซเคิลได้"],
+ ["📦","กล่องลังกระดาษ","rec","กระดาษลูกฟูกรีไซเคิลได้"],
+ ["📄","กระดาษ A4 ใช้แล้ว","rec","กระดาษสะอาด รีไซเคิลได้"],
+ ["🥤","ขวดน้ำพลาสติกเปล่า","rec","ขวด PET รีไซเคิลได้"],
+ ["🥫","กระป๋องเครื่องดื่ม","rec","อะลูมิเนียมรีไซเคิลได้"],
+ ["📰","หนังสือพิมพ์","rec","กระดาษรีไซเคิลได้"],
+ ["🎞️","ฟิล์มห่อพาเลทสะอาด","rec","พลาสติกสะอาด รีไซเคิลได้"],
+ ["🍬","ซองขนม","gen","ฟอยล์ปนพลาสติก รีไซเคิลยาก"],
+ ["🤧","ทิชชู่ใช้แล้ว","gen","กระดาษสกปรก รีไซเคิลไม่ได้"],
+ ["🍱","กล่องโฟมใส่อาหาร","gen","โฟมเปื้อนอาหาร"],
+ ["☕","แก้วกาแฟพลาสติกเปื้อน","gen","เปื้อนเครื่องดื่ม"],
+ ["🛍️","ถุงพลาสติกเปื้อนอาหาร","gen","พลาสติกสกปรก"],
+ ["🥢","ตะเกียบไม้ใช้แล้ว","gen","ใช้แล้วทิ้ง"]
+];
+const GAME=45;
+const $=id=>document.getElementById(id);
+let state="intro",locked=false,score=0,left=GAME,streak=0,hits=0,wrongs=0,cur=null,last=-1,missed=new Map(),tick=null,busy=false;
+
+function nextItem(){
+  let k;do{k=Math.floor(Math.random()*ITEMS.length)}while(k===last);last=k;cur=ITEMS[k];
+  const c=$("card");c.className="card";void c.offsetWidth;c.classList.add("pop");
+  $("ic").textContent=cur[0];$("nm").textContent=cur[1];$("why").textContent="";
+  document.querySelectorAll(".bin").forEach(b=>{b.classList.remove("hint");b.disabled=false});busy=false;
+}
+function drop(b){
+  if(state!=="play"||busy)return;busy=true;
+  const ok=b===cur[2],c=$("card");
+  if(ok){streak++;hits++;score+=streak>=5?15:10;c.className="card ok";$("why").textContent=(streak>=5?"+15 ":"+10 ")+"✓";setTimeout(nextItem,350)}
+  else{
+    streak=0;wrongs++;score=Math.max(0,score-5);c.className="card bad";
+    $("why").textContent=`→ ${BIN[cur[2]]}: ${cur[3]}`;$("b-"+cur[2]).classList.add("hint");
+    missed.set(cur[1],cur);document.querySelectorAll(".bin").forEach(x=>x.disabled=true);
+    setTimeout(()=>{if(state==="play")nextItem()},1500);
+  }
+  $("score").textContent=score;$("streak").textContent=streak>=2?`ติดกัน ${streak}`:"";
+}
+document.querySelectorAll(".bin").forEach(b=>b.addEventListener("click",()=>drop(b.dataset.b)));
+document.addEventListener("keydown",e=>{const m={"1":"haz","2":"rec","3":"gen"}[e.key];if(m)drop(m)});
+
+function start(){
+  const miss=!$("pname").value.trim()?"pname":!$("pdept").value.trim()?"pdept":null;
+  if(!locked&&miss){$("err").hidden=false;$(miss).focus();return}
+  if(!locked){
+    locked=true;$("pname").readOnly=$("pdept").readOnly=true;
+    const b1=document.createElement("b"),b2=document.createElement("b");
+    b1.textContent=$("pname").value.trim();b2.textContent=$("pdept").value.trim();
+    $("player").append("ผู้เล่น: ",b1," · แผนก: ",b2);
+  }
+  ["namebox","intro","err","result","player","btn","guide"].forEach(id=>$(id).hidden=true);
+  ["hud","card","bins","keys"].forEach(id=>$(id).hidden=false);
+  state="play";score=0;left=GAME;streak=0;hits=0;wrongs=0;missed=new Map();
+  $("score").textContent=0;$("time").textContent=left;$("streak").textContent="";nextItem();
+  tick=setInterval(()=>{left--;$("time").textContent=left;if(left<=0)end()},1000);
+}
+function end(){
+  state="end";clearInterval(tick);
+  ["hud","card","bins","keys"].forEach(id=>$(id).hidden=true);
+  ["result","player","btn","guide"].forEach(id=>$(id).hidden=false);
+  $("final").textContent=score;
+  $("rank").textContent=score>=300?"Waste Sorting Champion":score>=200?"เก่งมาก! แยกขยะเป็นมือโปร":score>=100?"ดีแล้ว ฝึกอีกนิด":"ลองใหม่อีกรอบนะ";
+  $("stat").textContent=`${$("pname").value.trim()} (${$("pdept").value.trim()}) · ถูก ${hits} · ผิด ${wrongs}`;
+  $("list").innerHTML=missed.size?[...missed.values()].map(x=>`<li>${x[0]} ${x[1]}<small>${BIN[x[2]]} — ${x[3]}</small></li>`).join(""):"";
+  $("btn").textContent="เล่นอีกครั้ง";sendScore();
+}
+function sendScore(){
+  const s=$("send");
+  if(!FORM_URL){s.textContent="ยังไม่ได้ตั้งค่าการส่งคะแนน";return}
+  const f=document.createElement("form");f.method="POST";f.action=FORM_URL;f.target="scoreSink";f.hidden=true;
+  const data={[ENTRY_NAME]:$("pname").value.trim(),[ENTRY_DEPT]:$("pdept").value.trim(),[ENTRY_SCORE]:score};
+  for(const k in data){const el=document.createElement("input");el.type="hidden";el.name=k;el.value=data[k];f.appendChild(el)}
+  document.body.appendChild(f);s.textContent="กำลังส่งคะแนน…";
+  $("scoreSink").onload=()=>{s.textContent="ส่งคะแนนเรียบร้อย";f.remove()};
+  try{f.submit()}catch(e){s.textContent="ส่งคะแนนไม่สำเร็จ"}
+}
+$("btn").onclick=start;
+</script>
+</body>
+</html>
